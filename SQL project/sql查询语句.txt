@@ -1,0 +1,75 @@
+
+1.考察各类别及产品的存货量与订单量之间的关系：
+
+SELECT P.CategoryID,
+C.CategoryName,
+P.productName,
+P.UnitsOnOrder-P.UnitsInStock Demand 
+FROM Products P 
+JOIN Categories C ON P.CategoryID=C.CategoryID 
+GROUP BY P.ProductID
+ORDER BY Demand DESC;
+
+
+2.各种类产品的预测回购销售情况：
+
+SELECT P.CategoryID,
+C.CategoryName,
+sum(P.UnitPrice*P.UnitsOnOrder*P.ReorderLevel) PreGains
+FROM Products P 
+JOIN Categories C ON P.CategoryID=C.CategoryID 
+GROUP BY C.CategoryID 
+ORDER BY PreGains DESC;
+
+
+
+
+
+3. 考察整体销售各类别的销售额及占比：
+
+CREATE VIEW "temp" AS 
+SElECT CategoryName,
+sum(SalesPrice) SalesPrice_total 
+FROM
+(SELECT P.CategoryID,
+ C.CategoryName,
+ P.productName,
+ O.OrderId,
+ sum(O.UnitPrice*O.Quantity*(1-O.Discount)) SalesPrice
+ FROM Products P 
+ JOIN Categories C ON P.CategoryID=C.CategoryID
+ JOIN OrderDetails O ON P.ProductID=O.ProductID 
+ GROUP BY O.OrderId 
+ ORDER BY SalesPrice DESC)
+ GROUP BY CategoryID
+ ORDER BY SalesPrice_total DESC;
+
+SELECT CategoryName ,
+SalesPrice_total,SalesPrice_total/(SELECT sum(SalesPrice_total)FROM "temp" )  percents 
+FROM "temp"；
+
+
+
+
+4. 考察2015年一个季度（2015-07_2015-09）各种类产品的销售情况：
+
+SELECT CategoryName,
+       SUM(CASE WHEN ord_date ='2015-07' THEN SalesPrice ELSE 0 END) AS July,
+	    SUM(CASE WHEN ord_date ='2015-08' THEN SalesPrice ELSE 0 END) AS August,
+		 SUM(CASE WHEN ord_date ='2015-09' THEN SalesPrice ELSE 0 END) AS September
+ FROM (
+
+ SELECT P.CategoryID,
+ C.CategoryName,
+ P.productName,
+ STRFTIME('%Y-%m', Ord.OrderDate) ord_date,
+ sum(O.UnitPrice*O.Quantity*(1-O.Discount)) SalesPrice
+ FROM Products P 
+ JOIN Categories C ON P.CategoryID=C.CategoryID
+ JOIN OrderDetails O ON P.ProductID=O.ProductID 
+ JOIN Orders Ord ON O.OrderId = Ord.OrderId
+ GROUP BY O.OrderId 
+ ORDER BY SalesPrice DESC)
+ GROUP BY CategoryName；
+ 
+
